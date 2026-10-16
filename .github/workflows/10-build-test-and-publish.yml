@@ -1,15 +1,17 @@
-name: Build Test and Publish Book API
+name: Build Book API and Publish Docker Image
+
 
 # ============================================================
-# TWO EVENTS CAN START THIS WORKFLOW
+# WORKFLOW TRIGGERS
 # ============================================================
 #
-# 1. PUSH
-#    Developer changes application code.
+# This workflow can start in two ways:
 #
-# 2. REPOSITORY_DISPATCH
-#    Automation repository tells us:
-#    "Automation tests passed."
+# 1. Developer pushes code to main
+#
+# 2. Automation repository sends:
+#
+#       automation-tests-passed
 #
 # ============================================================
 
@@ -26,24 +28,43 @@ on:
       - automation-tests-passed
 
 
+# ============================================================
+# PERMISSIONS
+# ============================================================
+#
+# id-token: write
+#
+# Required for GitHub OIDC authentication with AWS.
+#
+# contents: read
+#
+# Required to checkout the repository.
+#
+# ============================================================
+
 permissions:
-  contents: read
   id-token: write
+  contents: read
 
 
 jobs:
 
+
   # ==========================================================
-  # JOB 1 - BUILD APPLICATION
+  # JOB 1 - BUILD BOOK API
   # ==========================================================
   #
-  # Runs only for:
+  # Runs when:
   #
-  # push
+  # Developer pushes code
+  #
   # OR
-  # manual execution
   #
-  # It does NOT run when automation sends the callback.
+  # Workflow is manually started.
+  #
+  # It does NOT run when automation sends
+  # automation-tests-passed.
+  #
   # ==========================================================
 
   build:
@@ -56,10 +77,12 @@ jobs:
 
     runs-on: ubuntu-latest
 
+
     steps:
 
+
       # -------------------------------------------------------
-      # Checkout application
+      # STEP 1 - CHECKOUT APPLICATION
       # -------------------------------------------------------
 
       - name: Checkout Book API
@@ -67,7 +90,7 @@ jobs:
 
 
       # -------------------------------------------------------
-      # Install Java
+      # STEP 2 - INSTALL JAVA
       # -------------------------------------------------------
 
       - name: Set up Java 17
@@ -80,10 +103,17 @@ jobs:
 
 
       # -------------------------------------------------------
-      # Compile application and run unit tests
+      # STEP 3 - BUILD APPLICATION
+      # -------------------------------------------------------
+      #
+      # Compile application and run unit tests.
+      #
+      # If this fails, the next step will NOT execute.
+      #
       # -------------------------------------------------------
 
       - name: Build and Unit Test Book API
+
         run: |
 
           echo "=========================================="
@@ -94,17 +124,20 @@ jobs:
 
 
       # -------------------------------------------------------
-      # Trigger automation repository
+      # STEP 4 - TRIGGER AUTOMATION REPOSITORY
       # -------------------------------------------------------
       #
-      # Notice that we pass github.sha.
+      # This sends:
       #
-      # This tells the automation repository exactly which
-      # application commit needs to be tested.
+      #     book-api-build-success
+      #
+      # to:
+      #
+      #     test-bookapi-automation
       #
       # -------------------------------------------------------
 
-      - name: Trigger API Automation Tests
+      - name: Trigger Automation Repository
 
         env:
           GH_TOKEN: ${{ secrets.AUTOMATION_REPO_TOKEN }}
@@ -115,11 +148,9 @@ jobs:
           echo "APPLICATION BUILD PASSED"
           echo "=========================================="
 
-          echo "Application commit:"
-          echo "${{ github.sha }}"
-
           echo ""
           echo "Triggering automation tests..."
+          echo ""
 
           curl --fail-with-body -L \
             -X POST \
@@ -127,29 +158,40 @@ jobs:
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             https://api.github.com/repos/kscorpio77/test-bookapi-automation/dispatches \
-            -d '{
-                  "event_type":"book-api-build-success",
-                  "client_payload":{
-                    "application_sha":"${{ github.sha }}"
-                  }
-                }'
+            -d '{"event_type":"book-api-build-success"}'
 
           echo ""
-          echo "Automation workflow triggered."
+          echo "Automation workflow triggered successfully."
 
 
   # ==========================================================
-  # JOB 2 - BUILD AND PUSH DOCKER IMAGE
+  # JOB 2 - BUILD DOCKER IMAGE AND PUSH TO ECR
   # ==========================================================
   #
-  # THIS IS THE IMPORTANT PART.
+  # IMPORTANT:
   #
   # This job runs ONLY when the automation repository sends:
   #
   #     automation-tests-passed
   #
-  # Therefore Docker image creation cannot happen until
-  # automation has successfully completed.
+  # Therefore:
+  #
+  # Automation FAILS
+  #       ↓
+  # No automation-tests-passed
+  #       ↓
+  # This job NEVER runs
+  #
+  #
+  # Automation PASSES
+  #       ↓
+  # automation-tests-passed
+  #       ↓
+  # This job runs
+  #       ↓
+  # Docker build
+  #       ↓
+  # Push to ECR
   #
   # ==========================================================
 
@@ -163,24 +205,39 @@ jobs:
 
     runs-on: ubuntu-latest
 
+
     steps:
 
+
       # -------------------------------------------------------
-      # Checkout EXACT commit that automation tested
+      # STEP 1 - CHECKOUT APPLICATION
+      # -------------------------------------------------------
+      #
+      # We checkout the current application repository.
+      #
       # -------------------------------------------------------
 
-      - name: Checkout Tested Application Commit
+      - name: Checkout Application
         uses: actions/checkout@v4
 
-        with:
-          ref: ${{ github.event.client_payload.application_sha }}
-
 
       # -------------------------------------------------------
-      # Configure AWS credentials using OIDC
+      # STEP 2 - CONFIGURE AWS CREDENTIALS
+      # -------------------------------------------------------
+      #
+      # GitHub uses OIDC to assume the AWS IAM role.
+      #
+      # AWS_ROLE_ARN must exist in:
+      #
+      # Application Repo
+      #   → Settings
+      #   → Secrets and variables
+      #   → Actions
+      #
       # -------------------------------------------------------
 
       - name: Configure AWS Credentials
+
         uses: aws-actions/configure-aws-credentials@v4
 
         with:
@@ -189,51 +246,79 @@ jobs:
 
 
       # -------------------------------------------------------
-      # Login to Amazon ECR
+      # STEP 3 - LOGIN TO AMAZON ECR
       # -------------------------------------------------------
 
       - name: Login to Amazon ECR
+
         id: login-ecr
 
         uses: aws-actions/amazon-ecr-login@v2
 
 
       # -------------------------------------------------------
-      # Build Docker image
+      # STEP 4 - BUILD DOCKER IMAGE
       # -------------------------------------------------------
       #
-      # We use the tested Git commit as the image tag.
+      # FIX:
+      #
+      # Previously we used:
+      #
+      # github.event.client_payload.application_sha
+      #
+      # But the automation repository was not sending it.
+      #
+      # Therefore IMAGE_TAG became empty:
+      #
+      #     mybookapi:
+      #
+      # which caused:
+      #
+      #     invalid reference format
+      #
+      #
+      # Now we simply obtain the SHA from the checked-out
+      # application repository:
+      #
+      #     git rev-parse --short HEAD
       #
       # Example:
       #
-      # mybookapi:a73f92c
+      #     6b81a4f
+      #
+      # Docker image becomes:
+      #
+      #     mybookapi:6b81a4f
       #
       # -------------------------------------------------------
 
       - name: Build Docker Image
 
         env:
-
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-
           ECR_REPOSITORY: mybookapi
-
-          APPLICATION_SHA: ${{ github.event.client_payload.application_sha }}
 
         run: |
 
-          IMAGE_TAG=$(echo "$APPLICATION_SHA" | cut -c1-7)
+          IMAGE_TAG=$(git rev-parse --short HEAD)
 
           echo "=========================================="
           echo "BUILDING PRODUCTION DOCKER IMAGE"
           echo "=========================================="
 
-          echo "Commit:"
-          echo "$APPLICATION_SHA"
+          echo ""
+          echo "Git commit:"
+          git rev-parse HEAD
 
           echo ""
-          echo "Image tag:"
+          echo "Docker image tag:"
           echo "$IMAGE_TAG"
+
+          echo ""
+          echo "Docker image:"
+          echo "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          echo ""
 
           docker build \
             -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
@@ -241,33 +326,35 @@ jobs:
 
 
       # -------------------------------------------------------
-      # Push Docker image to ECR
+      # STEP 5 - PUSH DOCKER IMAGE TO ECR
       # -------------------------------------------------------
 
       - name: Push Docker Image to ECR
 
         env:
-
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-
           ECR_REPOSITORY: mybookapi
-
-          APPLICATION_SHA: ${{ github.event.client_payload.application_sha }}
 
         run: |
 
-          IMAGE_TAG=$(echo "$APPLICATION_SHA" | cut -c1-7)
+          IMAGE_TAG=$(git rev-parse --short HEAD)
 
           echo "=========================================="
-          echo "PUSHING IMAGE TO AMAZON ECR"
+          echo "PUSHING DOCKER IMAGE TO ECR"
           echo "=========================================="
+
+          echo ""
+          echo "Image:"
+          echo "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          echo ""
 
           docker push \
             "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
           echo ""
           echo "=========================================="
-          echo "IMAGE SUCCESSFULLY PUSHED"
+          echo "DOCKER IMAGE SUCCESSFULLY PUSHED TO ECR"
           echo "=========================================="
 
           echo ""
