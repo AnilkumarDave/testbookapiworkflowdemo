@@ -22,7 +22,7 @@ import java.util.List;
 @RequestMapping("/api/books")
 @Validated
 /** Controller for book**/
-public class BookController
+public class BookController{
 
     private static final Logger logger = LoggerFactory.getLogger(BookController.class);
 
