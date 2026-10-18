@@ -1,5 +1,7 @@
 # Argo CD Demo — One-Sheet Command Cheat Sheet
-
+Argo CD is a GitOps-based Continuous Delivery (CD) tool that automatically deploys applications to Kubernetes by monitoring configuration files stored in Git.
+In simple terms:
+Argo CD makes sure that what is running in Kubernetes matches what you have defined in GitHub.
 **Project:** TestBook API · **EKS:** `testbook-cluster` · **Region:** `eu-north-1`  
 **Argo CD Application:** `testbook-api-dev` · **Argo CD namespace:** `argocd` · **App namespace:** `dev`  
 **GitHub repository:** `kscorpio77/testbookapiworkflowdemo` · **Branch:** `main`  
