@@ -5,7 +5,7 @@ replicaCount: 3
 environment: dev
 
 image:
-  tag: "e4791af"
+  tag: "e9841eb"
 
 service:
   type: LoadBalancer
