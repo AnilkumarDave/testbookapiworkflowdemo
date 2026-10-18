@@ -1,6 +1,6 @@
 # DEV environment config
 
-replicaCount: 3
+replicaCount: 5
 
 environment: dev
 
