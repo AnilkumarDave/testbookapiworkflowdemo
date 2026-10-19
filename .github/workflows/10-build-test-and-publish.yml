@@ -235,7 +235,9 @@ jobs:
       #   → Actions
       #
       # -------------------------------------------------------
-
+      - name: Inspect GitHub OIDC claims
+        uses: github/actions-oidc-debugger@main
+        
       - name: Configure AWS Credentials
 
         uses: aws-actions/configure-aws-credentials@v4
