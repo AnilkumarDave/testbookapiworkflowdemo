@@ -17,9 +17,9 @@ name: "05 - Build, Push to ECR and Deploy to EC2 for complete demo"
 # ------------------------------------------------------------
 
 on:
-  push:
-    branches:
-      - main
+ # push:
+ #   branches:
+ #     - main
 
   workflow_dispatch:
 
