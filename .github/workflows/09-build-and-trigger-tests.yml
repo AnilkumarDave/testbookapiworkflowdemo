@@ -9,9 +9,9 @@ name: Build Book API and Trigger Automation Tests
 # ============================================================
 
 on:
-  push:
-    branches:
-      - main
+#  push:
+#    branches:
+#      - main
 
   workflow_dispatch:
 
