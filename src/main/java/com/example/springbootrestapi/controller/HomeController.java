@@ -8,6 +8,7 @@ public class HomeController {
 
     @GetMapping("/")
     public String home() {
+        //verify 
         return "Spring Boot REST API is running. Use /api/books";
     }
 }
