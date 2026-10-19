@@ -1,9 +1,9 @@
 name: Testbook API - CI/CD with Helm and Amazon EKS
 
 on:
-  push:
-    branches:
-      - main
+ # push:
+ #   branches:
+ #     - main
   workflow_dispatch:
 
 permissions:
