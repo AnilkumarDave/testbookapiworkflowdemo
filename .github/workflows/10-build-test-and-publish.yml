@@ -246,7 +246,7 @@ jobs:
 
           PAYLOAD=$(echo "$TOKEN" | cut -d '.' -f 2)
 
-          echo "$PAYLOAD" | base64 -d 2>/dev/null | jq '{sub, aud}'
+          echo "$PAYLOAD" | base64 -d 2>/dev/null | jq '{sub, aud}' || true
         
       - name: Configure AWS Credentials
 
