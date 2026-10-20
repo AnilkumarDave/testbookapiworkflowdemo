@@ -1,11 +1,11 @@
 # DEV environment config
 
-replicaCount: 5
+replicaCount: 2
 
 environment: dev
 
 image:
-  tag: "94d81b5"
+  tag: "c59358a"
 
 service:
   type: LoadBalancer

@@ -45,7 +45,7 @@ spec:
   source:
 
     # GitHub repository containing our Helm chart
-    repoURL: https://github.com/kscorpio77/testbookapiworkflowdemo.git
+    repoURL: https://github.com/AnilkumarDave/testbookapiworkflowdemo.git
 
     # Branch that Argo CD should monitor
     targetRevision: main

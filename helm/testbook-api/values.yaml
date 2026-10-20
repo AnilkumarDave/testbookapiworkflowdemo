@@ -3,7 +3,7 @@ replicaCount: 2
 
 # Docker image information
 image:
-  repository: 316255801172.dkr.ecr.eu-north-1.amazonaws.com/mybookapi
+  repository: 074494041026.dkr.ecr.eu-north-1.amazonaws.com/mybookapi
 
   # GitHub Actions will automatically replace this
   # with the Git commit/image tag.
